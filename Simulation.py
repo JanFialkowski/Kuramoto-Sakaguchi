@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 
-alpha = 0.01*np.pi
-beta = 0.3*np.pi
-eps = 0.1
+alpha = 0.4*np.pi
+beta = 0.01*np.pi
+eps = 0.001
 N = 3
 state = [0,1,2,0,0,0,0,0,0,0,0,0]
 
@@ -36,23 +36,65 @@ def f(state,t):
 			derivs.append(deltkappa(state,i+1,j+1))#i,j in [0,N-1]
 	return derivs
 
+def derivs(state,t):
+	Phis,Kappas = state
+	DelPhis = (Phis-Phis[:,np.newaxis]).T
+	DKappa = -eps*(np.sin(DelPhis+beta)+Kappas)
+	DelPhis += alpha
+	DelPhis = Kappas*np.sin(DelPhis)
+	DPhis = DelPhis.sum(axis=1)/Phis.shape[0]
+	derivates = [DPhis,DKappa]
+	return derivatives
 def Calccoords(state):
-	l1 = (state[2]-state[1])/np.pi%1
-	l2 = (state[3]-state[2])/np.pi%1
-	return [l1,l2]
+	while state[0]>2*np.pi:
+		state[0]-=2*np.pi
+	while state[1]>2*np.pi:
+		state[1]-=2*np.pi
+	while state[2]>2*np.pi:
+		state[2]-=2*np.pi
+	state.sort()
+	s0 = 0
+	s1 = state[1]-state[0]
+	s2 = state[2]-state[0]
+	l3 = (2*np.pi-s2)/(2*np.pi)
+	l2 = np.abs(s2-s1)/(2*np.pi)
+	l1 = np.abs(s1-s0)/(2*np.pi)
+	Sum = l1+l2+l3
+	return [l1,l2,l3]
 
+def Coordstopointinspace(l):
+	x = (l[1]+l[0]*0.5)/(l[0]+l[1]+l[2])
+	y = l[0]*np.sqrt(3)/2/(l[0]+l[1]+l[2])
+	return [x,y]
 
-state0 = np.zeros((12,))
-state0 -= np.array([0,0,0.1,np.sin(beta),np.sin(beta),np.sin(beta),np.sin(beta),np.sin(beta),np.sin(beta),np.sin(beta),np.sin(beta),np.sin(beta)])
-t = np.arange(0,10000,0.01)
-
-print (Gamma(1./3.)-alpha-beta)/np.pi
-states = odeint(f,state0,t)
-Phis = [[],[],[]]
-for i in xrange(len(Phis)):
-	for j in xrange(len(states)):
-		Phis[i].append(states[j][i]/np.pi)
-		
-for Set in Phis:
-	plt.plot(t,Set)
-plt.show()
+if __name__=="__main__":
+	state0 = np.zeros((12,))
+	state0 -= np.array([0, -2./3*np.pi, -4./3*np.pi, np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta)])
+	t = np.arange(0,1000,0.1)
+	
+	print (Gamma(1./3.)-alpha-beta)/np.pi
+	states = odeint(f,state0,t)
+	Phis = [[],[],[]]
+	for i in xrange(len(Phis)):
+		for j in xrange(len(states)):
+			Phis[i].append(states[j][i])
+			
+	for Set in Phis:
+		plt.plot(t,Set)
+	plt.show()
+	
+	Xvals = []
+	Yvals = []
+	for i in xrange(len(Phis[0])/1):
+		state = [Phis[0][i],Phis[1][i],Phis[2][i]]
+		Coords = Calccoords(state)
+		point = Coordstopointinspace(Coords)
+		#print Coords
+		Xvals.append(point[0])
+		Yvals.append(point[1])
+	
+	plt.scatter(Xvals,Yvals, s=0.05)
+	plt.plot([0,1],[0,0],lw=0.2,c="k")
+	plt.plot([0,0.5],[0,np.sqrt(3)/2],lw=0.2,c="k")
+	plt.plot([0.5,1],[np.sqrt(3)/2,0],lw = 0.2, c="k")
+	plt.show()
