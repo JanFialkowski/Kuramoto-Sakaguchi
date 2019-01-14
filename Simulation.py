@@ -1,12 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
+#from scipy.integrate import solve_ivp
 
 alpha = 0.4*np.pi
 beta = 0.01*np.pi
 eps = 0.001
 N = 3
-state = [0,1,2,0,0,0,0,0,0,0,0,0]
+state = [np.array([0,1,2]),np.array([0,0,0,0,0,0,0,0,0])]
 
 def Gamma(n):
 	delta = 2*(alpha+beta)
@@ -43,8 +44,9 @@ def derivs(state,t):
 	DelPhis += alpha
 	DelPhis = Kappas*np.sin(DelPhis)
 	DPhis = DelPhis.sum(axis=1)/Phis.shape[0]
-	derivates = [DPhis,DKappa]
+	derivatives = [DPhis,DKappa]
 	return derivatives
+
 def Calccoords(state):
 	while state[0]>2*np.pi:
 		state[0]-=2*np.pi
@@ -68,21 +70,38 @@ def Coordstopointinspace(l):
 	return [x,y]
 
 if __name__=="__main__":
-	state0 = np.zeros((12,))
-	state0 -= np.array([0, -2./3*np.pi, -4./3*np.pi, np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta)])
-	t = np.arange(0,1000,0.1)
-	
+	Phi0 = np.arange(3,dtype='float64')
+	Phi0 *= 2./3*np.pi
+	Kappa0 = np.ones((3,3),dtype='float64')
+	Kappa0 *= np.sin(beta)
+	state0 = [[Phi0],[Kappa0]]
+#	state0 = np.zeros((12,))
+#	state0 -= np.array([0, -2./3*np.pi, -4./3*np.pi, np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta)])
+#	t = np.arange(0,1000,0.1)
 	print (Gamma(1./3.)-alpha-beta)/np.pi
-	states = odeint(f,state0,t)
+#	states = odeint(derivs,state0,t)
+	states = state0
+	t=0
+	while t<1e6:
+		calc_state = [states[0][-1],states[1][-1]]
+#		print calc_state
+		
+		d = derivs(calc_state,0)
+#		print d
+		states[0].append(np.array(states[0][-1])+0.001*d[0])
+		states[1].append(np.array(states[1][-1])+0.001*d[1])
+		t+=1
+		if t%1e3:
+			print t/1000.
 	Phis = [[],[],[]]
 	for i in xrange(len(Phis)):
-		for j in xrange(len(states)):
-			Phis[i].append(states[j][i])
+		for j in xrange(len(states[0])):
+			Phis[i].append(states[0][j][i])
 			
 	for Set in Phis:
-		plt.plot(t,Set)
+		plt.plot(Set)
 	plt.show()
-	
+	"""
 	Xvals = []
 	Yvals = []
 	for i in xrange(len(Phis[0])/1):
@@ -98,3 +117,4 @@ if __name__=="__main__":
 	plt.plot([0,0.5],[0,np.sqrt(3)/2],lw=0.2,c="k")
 	plt.plot([0.5,1],[np.sqrt(3)/2,0],lw = 0.2, c="k")
 	plt.show()
+	"""
