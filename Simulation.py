@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 #from scipy.integrate import solve_ivp
 
-alpha = 0.4*np.pi
+alpha = -0.4*np.pi
 beta = 0.01*np.pi
 eps = 0.001
 N = 3
@@ -38,13 +38,17 @@ def f(state,t):
 	return derivs
 
 def derivs(state,t):
-	Phis,Kappas = state
+	N = int(-0.5+np.sqrt(0.25+len(state)))
+	Phis = state[:N]
+	Kappas = state[N:].reshape(N,N)
 	DelPhis = (Phis-Phis[:,np.newaxis]).T
 	DKappa = -eps*(np.sin(DelPhis+beta)+Kappas)
 	DelPhis += alpha
 	DelPhis = Kappas*np.sin(DelPhis)
-	DPhis = DelPhis.sum(axis=1)/Phis.shape[0]
-	derivatives = [DPhis,DKappa]
+	DPhis = DelPhis.sum(axis=1)/Phis.shape[0]*(-1)
+	derivatives = np.concatenate((DPhis,DKappa.flatten()))
+	if t%100==0:
+		print t/100.
 	return derivatives
 
 def Calccoords(state):
@@ -69,34 +73,25 @@ def Coordstopointinspace(l):
 	y = l[0]*np.sqrt(3)/2/(l[0]+l[1]+l[2])
 	return [x,y]
 
+def CalcR2(Phis):
+	return (np.exp(1j*Phis)).sum()/len(Phis)
 if __name__=="__main__":
-	Phi0 = np.arange(3,dtype='float64')
+	Phi0 = np.arange(50,dtype='float64')
 	Phi0 *= 2./3*np.pi
-	Kappa0 = np.ones((3,3),dtype='float64')
+	Phi0[0] += 0.1
+	Kappa0 = np.ones((2500,),dtype='float64')
 	Kappa0 *= np.sin(beta)
-	state0 = [[Phi0],[Kappa0]]
+	state0 = np.concatenate((Phi0,Kappa0))
 #	state0 = np.zeros((12,))
 #	state0 -= np.array([0, -2./3*np.pi, -4./3*np.pi, np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta)])
-#	t = np.arange(0,1000,0.1)
+	t = np.arange(0,1000,0.1)
 	print (Gamma(1./3.)-alpha-beta)/np.pi
-#	states = odeint(derivs,state0,t)
-	states = state0
-	t=0
-	while t<1e6:
-		calc_state = [states[0][-1],states[1][-1]]
-#		print calc_state
-		
-		d = derivs(calc_state,0)
-#		print d
-		states[0].append(np.array(states[0][-1])+0.001*d[0])
-		states[1].append(np.array(states[1][-1])+0.001*d[1])
-		t+=1
-		if t%1e3:
-			print t/1000.
-	Phis = [[],[],[]]
+	states = odeint(derivs,state0,t)
+	print states
+	Phis = [[] for i in Phi0]
 	for i in xrange(len(Phis)):
-		for j in xrange(len(states[0])):
-			Phis[i].append(states[0][j][i])
+		for j in xrange(len(states)):
+			Phis[i].append(states[j][i])
 			
 	for Set in Phis:
 		plt.plot(Set)
