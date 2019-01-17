@@ -1,41 +1,22 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
+import matplotlib.animation as manimation
+import Kuramoto as K
 #from scipy.integrate import solve_ivp
 
-alpha = -0.4*np.pi
-beta = 0.01*np.pi
+alpha = 0.4*np.pi
+beta = -1.*np.pi
 eps = 0.001
-N = 3
-state = [np.array([0,1,2]),np.array([0,0,0,0,0,0,0,0,0])]
 
 def Gamma(n):
 	delta = 2*(alpha+beta)
 	s = np.sin(delta)
 	c = np.cos(delta)
 	G = n*s
-	G2 =((1+c)*n-1)
+	G2 =-((1+c)*n-1)
 	Out=np.arctan2(G,G2)
 	return Out
-
-def deltkappa(state,i,j): #i,j are oscillatorindices in [1,N]
-	return -eps*(np.sin(state[i-1]-state[j-1]+beta)+state[3*i+j-1])
-
-def deltphi(state,i):#i in [1,N]
-	Res = 0
-	for j in xrange(N):#j in [0,N-1]
-		Res += state[3*i+j]*np.sin(state[i-1]-state[j]+alpha)
-	Res /= -N
-	return Res
-
-def f(state,t):
-	derivs = []
-	for i in xrange(N):
-		derivs.append(deltphi(state,i+1))#i in [0,N-1]
-	for i in xrange(N):
-		for j in xrange(N):
-			derivs.append(deltkappa(state,i+1,j+1))#i,j in [0,N-1]
-	return derivs
 
 def derivs(state,t):
 	N = int(-0.5+np.sqrt(0.25+len(state)))
@@ -74,42 +55,115 @@ def Coordstopointinspace(l):
 	return [x,y]
 
 def CalcR2(Phis):
-	return (np.exp(1j*Phis)).sum()/len(Phis)
-if __name__=="__main__":
-	Phi0 = np.arange(50,dtype='float64')
-	Phi0 *= 2./3*np.pi
-	Phi0[0] += 0.1
-	Kappa0 = np.ones((2500,),dtype='float64')
-	Kappa0 *= np.sin(beta)
-	state0 = np.concatenate((Phi0,Kappa0))
-#	state0 = np.zeros((12,))
-#	state0 -= np.array([0, -2./3*np.pi, -4./3*np.pi, np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta), np.sin(beta)])
-	t = np.arange(0,1000,0.1)
-	print (Gamma(1./3.)-alpha-beta)/np.pi
+	return np.sum((np.exp(2j*Phis)),axis=0)/len(Phis)
+
+def Integrator(state0, t, runs):
 	states = odeint(derivs,state0,t)
-	print states
 	Phis = [[] for i in Phi0]
+	for i in xrange(1,runs-1):
+		for k in xrange(len(Phis)):
+			for j in xrange(len(states)):
+				Phis[k].append(states[j][k])
+		states = odeint(derivs,states[-1],t)
+	print states
 	for i in xrange(len(Phis)):
 		for j in xrange(len(states)):
 			Phis[i].append(states[j][i])
-			
-	for Set in Phis:
-		plt.plot(Set)
+	return Phis
+
+if __name__=="__main__":
+	Phi0 = np.zeros(3)#np.random.rand(50)*2*np.pi*0.01
+	Phi0[0]= -(Gamma(1/3.)+alpha+beta)
+#	Phi0[1] = np.pi
+	Kappa0 = -np.sin((Phi0-Phi0[:,np.newaxis]).T+beta).flatten()
+	Phi0[0] += 0.001
+	state0 = np.concatenate((Phi0,Kappa0))
+	t = np.arange(0,300,.1)
+	print (-Gamma(1./3.)-alpha-beta)
+	Phis = Integrator(state0, t, 1)
+	state0[0]-=0.002
+	Phis2 = Integrator(state0, t, 1)
+#begin the plotting
+	fig, axs = plt.subplots(ncols=2, sharey = True)
+	ax = axs[0]
+	ax2 = axs[1]
+	ax.set_xlabel("Time step")
+	ax2.set_xlabel("Time step")
+	ax.set_title("Positive perturbation")
+	ax2.set_title("Negative perturbation")
+	ax.set_ylabel("Phase")
+#	ax2.set_ylabel("phase")
+	for i in xrange(len(Phis)):
+		ax.plot(Phis[i])#Phasen-time-plot
+		ax2.plot(Phis2[i])
 	plt.show()
-	"""
-	Xvals = []
-	Yvals = []
-	for i in xrange(len(Phis[0])/1):
-		state = [Phis[0][i],Phis[1][i],Phis[2][i]]
-		Coords = Calccoords(state)
-		point = Coordstopointinspace(Coords)
-		#print Coords
-		Xvals.append(point[0])
-		Yvals.append(point[1])
+	APhis = np.mod(np.array(Phis),2*np.pi)
+	APhis2 = np.mod(np.array(Phis2),2*np.pi)
+	R = CalcR2(np.array(Phis))
+	R2 = CalcR2(np.array(Phis2))
+	print np.abs(R)
+	print np.abs(R2)
+	plt.subplot(121, polar=True, title = "Positive Perturbation").plot(np.angle(R),np.abs(R))#Orderparameter time plot
+	plt.subplot(122, polar=True, title = "Negative Perturbation").plot(np.angle(R2),np.abs(R2))#Orderparameter time plot
+	plt.show()
+	#APhis.sort(axis=0)
+	#APhis2.sort(axis=0)
+	plt.plot(APhis.T[-1]/np.pi)#last Phases over index
+	plt.plot(APhis2.T[-1]/np.pi)#last Phases over index
+	plt.show()
+	ax = plt.subplot(121, polar=True)
+	ax2 = plt.subplot(122, polar=True)
+	for i in xrange(len(APhis)):
+		ax.scatter(np.angle(np.exp(1j*APhis[i][-1])),1)#Oscillators on circle
+		ax2.scatter(np.angle(np.exp(1j*APhis2[i][-1])),1)#Oscillators on circle
+	plt.show()
+	fig = plt.figure()
+	ax = fig.add_subplot(121)
+	ax2 = fig.add_subplot(122)
+	ax.plot((np.array(Phis[0])-np.array(Phis[1]))/np.pi, label = "Theta/pi")
+	ax.plot(np.abs(R), label = "R")
+	ax2.plot((np.array(Phis2[0])-np.array(Phis2[1]))/np.pi, label = "Theta/pi")
+	ax2.plot(np.abs(R2), label = "R")
+	plt.legend()
+	plt.show()
+	alpha = np.linspace(0,np.pi/2, num=1000)[:,np.newaxis]
+	beta = (np.linspace(0,2*np.pi,num=4000)-np.pi)
+	#"""
+	aalpha = np.linspace(0,np.pi/2,num=100)
+	abeta = np.linspace(0,2*np.pi,num=400)-np.pi
+	a,b = K.L1(1/50.,alpha,beta,eps)
+	c,d = K.L2(1/50.,alpha,abeta,eps)
+	e,f = K.L3(1/50.,alpha,beta,eps)
+	CountMatrix = 49*(a.real>=0)+49*(b.real>=0)+(e.real>=0)+(f.real>=0)
+	plt.imshow(CountMatrix, origin = "lower", extent = (-1,1,0,0.5))
+	plt.colorbar()
+	plt.show()
 	
-	plt.scatter(Xvals,Yvals, s=0.05)
-	plt.plot([0,1],[0,0],lw=0.2,c="k")
-	plt.plot([0,0.5],[0,np.sqrt(3)/2],lw=0.2,c="k")
-	plt.plot([0.5,1],[np.sqrt(3)/2,0],lw = 0.2, c="k")
+	a,b = K.L1(2/5.,alpha,beta,eps)
+	c,d = K.L2(2/5.,alpha,beta,eps)
+	e,f = K.L3(2/5.,alpha,beta,eps)
+	CountMatrix= 2*(a.real>=0)+2*(b.real>=0)+(c.real>=0)+(d.real>=0)+(e.real>=0)+(f.real>=0)
+	plt.imshow(CountMatrix, origin = "lower", extent = (-1,1,0,0.5))
+	plt.colorbar()
 	plt.show()
-	"""
+	#"""
+"""
+	FFMpegWriter = manimation.writers['ffmpeg']
+	metadata = dict(title='Movie Test', artist='Matplotlib', comment='Movie support!')
+	writer = FFMpegWriter(fps=25, metadata=metadata)
+
+	fig = plt.figure()
+	ax = fig.add_subplot(121)
+	ax2 = fig.add_subplot(122, polar = True)
+	for Set in Phis:
+		ax.plot(Set)
+	ax2.plot(np.angle(R),np.abs(R))
+	with writer.saving(fig, "Testing.mp4", 100):
+		for t in range(len(R)):
+			ax.plot([t,t],[np.min(Phis),np.max(Phis)], "black")
+			ax2.scatter(np.angle(R[t]),np.abs(R[t]),c="orange")
+			writer.grab_frame()
+			del ax.lines[-1]
+			del ax2.collections[-1]
+			print t
+"""
