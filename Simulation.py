@@ -3,11 +3,12 @@ import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 import matplotlib.animation as manimation
 import Kuramoto as K
+from mpl_toolkits.mplot3d import Axes3D
 #from scipy.integrate import solve_ivp
 
-alpha = 0.4*np.pi
-beta = -1.*np.pi
-eps = 0.001
+alpha = 0.49*np.pi
+beta = -0.99*np.pi
+eps = 0.01
 
 def Gamma(n):
 	delta = 2*(alpha+beta)
@@ -60,16 +61,23 @@ def CalcR2(Phis):
 def Integrator(state0, t, runs):
 	states = odeint(derivs,state0,t)
 	Phis = [[] for i in Phi0]
+	Kappa = [[],[]]
 	for i in xrange(1,runs-1):
 		for k in xrange(len(Phis)):
 			for j in xrange(len(states)):
 				Phis[k].append(states[j][k])
+		for j in xrange(len(states)):
+			Kappa[0].append(states[j][2*len(Phis)-1])
+			Kappa[1].append(states[j][-len(Phis)])
 		states = odeint(derivs,states[-1],t)
 	print states
 	for i in xrange(len(Phis)):
 		for j in xrange(len(states)):
 			Phis[i].append(states[j][i])
-	return Phis
+	for j in xrange(len(states)):
+		Kappa[0].append(states[j][2*len(Phis)-1])
+		Kappa[1].append(states[j][-len(Phis)])
+	return Phis,Kappa
 
 if __name__=="__main__":
 	Phi0 = np.zeros(3)#np.random.rand(50)*2*np.pi*0.01
@@ -80,10 +88,26 @@ if __name__=="__main__":
 	state0 = np.concatenate((Phi0,Kappa0))
 	t = np.arange(0,300,.1)
 	print (-Gamma(1./3.)-alpha-beta)
-	Phis = Integrator(state0, t, 1)
+	Phis, Kappa = Integrator(state0, t, 10)
 	state0[0]-=0.002
-	Phis2 = Integrator(state0, t, 1)
+	Phis2, Kappa2 = Integrator(state0, t, 10)
 #begin the plotting
+	fig = plt.figure()
+	ax = fig.add_subplot(121, projection = "3d")
+	ax2 = fig.add_subplot(122,projection = "3d")
+	ax.plot(Kappa[0], Kappa[1], (np.array(Phis[0])-np.array(Phis[1]))/np.pi)
+	ax.scatter(Kappa0[len(Phi0)-1], Kappa0[-len(Phi0)], (Phi0[0]-Phi0[1])/np.pi+2, c="black")
+	ax.scatter(Kappa0[len(Phi0)-1], Kappa0[-len(Phi0)], (Phi0[0]-Phi0[1])/np.pi+1, c="black")
+	ax.scatter(-np.sin(beta),-np.sin(beta),0,c="orange")
+	ax.scatter(-np.sin(beta),-np.sin(beta),1,c="orange")
+	ax2.plot(Kappa2[0], Kappa2[1], (np.array(Phis2[0])-np.array(Phis2[1]))/np.pi)
+	ax.set_xlabel("Kappa12")
+	ax.set_ylabel("Kappa21")
+	ax.set_zlabel("Theta")
+	ax2.set_xlabel("Kappa12")
+	ax2.set_ylabel("Kappa21")
+	ax2.set_zlabel("Theta")
+	plt.show()
 	fig, axs = plt.subplots(ncols=2, sharey = True)
 	ax = axs[0]
 	ax2 = axs[1]
@@ -128,25 +152,23 @@ if __name__=="__main__":
 	plt.show()
 	alpha = np.linspace(0,np.pi/2, num=1000)[:,np.newaxis]
 	beta = (np.linspace(0,2*np.pi,num=4000)-np.pi)
-	#"""
-	aalpha = np.linspace(0,np.pi/2,num=100)
-	abeta = np.linspace(0,2*np.pi,num=400)-np.pi
+	"""
 	a,b = K.L1(1/50.,alpha,beta,eps)
-	c,d = K.L2(1/50.,alpha,abeta,eps)
+	c,d = K.L2(1/50.,alpha,beta,eps)
 	e,f = K.L3(1/50.,alpha,beta,eps)
-	CountMatrix = 49*(a.real>=0)+49*(b.real>=0)+(e.real>=0)+(f.real>=0)
+	CountMatrix = 48*(a.real>=0)+48*(b.real>=0)+(e.real>=0)+(f.real>=0)
 	plt.imshow(CountMatrix, origin = "lower", extent = (-1,1,0,0.5))
 	plt.colorbar()
 	plt.show()
 	
-	a,b = K.L1(2/5.,alpha,beta,eps)
-	c,d = K.L2(2/5.,alpha,beta,eps)
-	e,f = K.L3(2/5.,alpha,beta,eps)
-	CountMatrix= 2*(a.real>=0)+2*(b.real>=0)+(c.real>=0)+(d.real>=0)+(e.real>=0)+(f.real>=0)
+	a,b = K.L1(1/3.,alpha,beta,eps)
+	c,d = K.L2(1/3.,alpha,beta,eps)
+	e,f = K.L3(1/3.,alpha,beta,eps)
+	CountMatrix= 1*(a.real>=0)+1*(b.real>=0)+0*(c.real>=0)+0*(d.real>=0)+(e.real>=0)+(f.real>=0)
 	plt.imshow(CountMatrix, origin = "lower", extent = (-1,1,0,0.5))
 	plt.colorbar()
 	plt.show()
-	#"""
+	"""
 """
 	FFMpegWriter = manimation.writers['ffmpeg']
 	metadata = dict(title='Movie Test', artist='Matplotlib', comment='Movie support!')
