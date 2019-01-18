@@ -6,8 +6,8 @@ import Kuramoto as K
 from mpl_toolkits.mplot3d import Axes3D
 #from scipy.integrate import solve_ivp
 
-alpha = 0.49*np.pi
-beta = -0.99*np.pi
+alpha = 0.4*np.pi
+beta = 0.9*np.pi
 eps = 0.01
 
 def Gamma(n):
@@ -80,33 +80,53 @@ def Integrator(state0, t, runs):
 	return Phis,Kappa
 
 if __name__=="__main__":
-	Phi0 = np.zeros(3)#np.random.rand(50)*2*np.pi*0.01
-	Phi0[0]= -(Gamma(1/3.)+alpha+beta)
+	Phi0 = np.zeros(50)#np.random.rand(50)*2*np.pi*0.01
+	#Phi0[0]= -(Gamma(1/50.)+alpha+beta)
 #	Phi0[1] = np.pi
 	Kappa0 = -np.sin((Phi0-Phi0[:,np.newaxis]).T+beta).flatten()
 	Phi0[0] += 0.001
 	state0 = np.concatenate((Phi0,Kappa0))
 	t = np.arange(0,300,.1)
-	print (-Gamma(1./3.)-alpha-beta)
-	Phis, Kappa = Integrator(state0, t, 10)
+	print (-Gamma(1./50.)-alpha-beta)/np.pi
+	Phis, Kappa = Integrator(state0, t, 1)
 	state0[0]-=0.002
-	Phis2, Kappa2 = Integrator(state0, t, 10)
+	Phis2, Kappa2 = Integrator(state0, t, 1)
+	state0[0]+=0.001
+	"""
+	state0[2*len(Phi0)-2:2*len(Phi0)]+=0.01
+	Phis3, Kappa3 = Integrator(state0, t, 10)
+	state0[2*len(Phi0)-2:2*len(Phi0)]-=0.02
+	Phis4, Kappa4 = Integrator(state0, t, 10)
+	state0[2*len(Phi0)-2:2*len(Phi0)]-=0.01
+	state0[-len(Phi0)]+=0.01
+	state0[-2*len(Phi0)] +=0.01
+	Phis5, Kappa5 = Integrator(state0, t, 10)
+	state0[-len(Phi0)]-=0.02
+	state0[-2*len(Phi0)] -=0.02
+	Phis6, Kappa6 = Integrator(state0, t, 10)
+	"""
 #begin the plotting
 	fig = plt.figure()
-	ax = fig.add_subplot(121, projection = "3d")
-	ax2 = fig.add_subplot(122,projection = "3d")
+	ax = fig.add_subplot(111, projection = "3d")
+	#ax2 = fig.add_subplot(122,projection = "3d")
+#	ax.plot(Kappa3[0], Kappa3[1], (np.array(Phis3[0])-np.array(Phis3[1]))/np.pi)
+#	ax.plot(Kappa6[0], Kappa6[1], (np.array(Phis6[0])-np.array(Phis6[1]))/np.pi)
+#	ax.plot(Kappa5[0], Kappa5[1], (np.array(Phis5[0])-np.array(Phis5[1]))/np.pi)
+#	ax.plot(Kappa4[0], Kappa4[1], (np.array(Phis4[0])-np.array(Phis4[1]))/np.pi)
 	ax.plot(Kappa[0], Kappa[1], (np.array(Phis[0])-np.array(Phis[1]))/np.pi)
-	ax.scatter(Kappa0[len(Phi0)-1], Kappa0[-len(Phi0)], (Phi0[0]-Phi0[1])/np.pi+2, c="black")
-	ax.scatter(Kappa0[len(Phi0)-1], Kappa0[-len(Phi0)], (Phi0[0]-Phi0[1])/np.pi+1, c="black")
+	ax.scatter(Kappa0[len(Phi0)-1], Kappa0[-len(Phi0)], (-(Gamma(1/50.)+alpha+beta)-Phi0[1])/np.pi-1, c="black")
+	ax.scatter(Kappa0[len(Phi0)-1], Kappa0[-len(Phi0)], (-(Gamma(1/50.)+alpha+beta)-Phi0[1])/np.pi+1, c="black")
+	ax.scatter(Kappa0[len(Phi0)-1], Kappa0[-len(Phi0)], (-(Gamma(1/50.)+alpha+beta)-Phi0[1])/np.pi, c="black")
 	ax.scatter(-np.sin(beta),-np.sin(beta),0,c="orange")
 	ax.scatter(-np.sin(beta),-np.sin(beta),1,c="orange")
-	ax2.plot(Kappa2[0], Kappa2[1], (np.array(Phis2[0])-np.array(Phis2[1]))/np.pi)
+	ax.scatter(-np.sin(beta),-np.sin(beta),2,c="orange")
+	ax.plot(Kappa2[0], Kappa2[1], (np.array(Phis2[0])-np.array(Phis2[1]))/np.pi)
 	ax.set_xlabel("Kappa12")
 	ax.set_ylabel("Kappa21")
 	ax.set_zlabel("Theta")
-	ax2.set_xlabel("Kappa12")
-	ax2.set_ylabel("Kappa21")
-	ax2.set_zlabel("Theta")
+	#ax2.set_xlabel("Kappa12")
+	#ax2.set_ylabel("Kappa21")
+	#ax2.set_zlabel("Theta")
 	plt.show()
 	fig, axs = plt.subplots(ncols=2, sharey = True)
 	ax = axs[0]
